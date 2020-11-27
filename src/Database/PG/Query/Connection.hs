@@ -461,7 +461,8 @@ prepare (PGConn conn _ _ _ counter table _ _) t tl = do
     (Just rk) -> return rk
     -- Not found
     Nothing -> do
-      w <- lift $ readIORef counter
+      -- Get the current counter and increment
+      w <- lift $ atomicModifyIORef' counter (\n -> (succ n, n))
       -- Create a new unique remote key
       let rk = fromString $ show w
       -- prepare the statement
@@ -469,8 +470,6 @@ prepare (PGConn conn _ _ _ counter table _ _) t tl = do
       lift $ do
         -- Insert into table
         HI.insert table lk rk
-        -- Increment the counter
-        writeIORef counter (succ w)
       return rk
 
 type PrepArg = (PQ.Oid, Maybe (DB.ByteString, PQ.Format))
